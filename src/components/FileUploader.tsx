@@ -1,7 +1,7 @@
 import { Upload, FileText } from 'lucide-react';
 
 interface FileUploaderProps {
-  onFileLoad: (content: string, filename: string) => void;
+  onFileLoad: (content: string, filename: string) => Promise<void>;
   onStatusChange: (status: 'idle' | 'loading' | 'success' | 'error', progress?: number, error?: string) => void;
 }
 
@@ -13,12 +13,10 @@ export default function FileUploader({ onFileLoad, onStatusChange }: FileUploade
     onStatusChange('loading', 0);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
-        onFileLoad(content, file.name);
-        onStatusChange('success');
-        setTimeout(() => onStatusChange('idle'), 1500);
+        await onFileLoad(content, file.name);
       } catch (error) {
         onStatusChange('error', 0, error instanceof Error ? error.message : 'Unknown error');
         setTimeout(() => onStatusChange('idle'), 3000);

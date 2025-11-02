@@ -32,7 +32,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleFileLoad = (content: string, name: string) => {
+  const handleFileLoad = async (content: string, name: string) => {
     try {
       const validation = validateFile(content.length, content);
       if (!validation.valid) {
@@ -40,7 +40,7 @@ export default function Dashboard() {
         return;
       }
 
-      const parsed = parseIISLog(content, (progressValue) => {
+      const parsed = await parseIISLog(content, (progressValue) => {
         setProgress(progressValue);
       });
 

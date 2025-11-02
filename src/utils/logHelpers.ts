@@ -14,11 +14,12 @@ export function validateFile(fileSize: number, fileContent: string): { valid: bo
   return { valid: true };
 }
 
-export function parseIISLog(fileContent: string, onProgress?: (progress: number) => void): LogEntry[] {
+export async function parseIISLog(fileContent: string, onProgress?: (progress: number) => void): Promise<LogEntry[]> {
   const lines = fileContent.split('\n');
   let fields: string[] = [];
   const entries: LogEntry[] = [];
   const totalLines = lines.length;
+  const chunkSize = 10000;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -50,9 +51,12 @@ export function parseIISLog(fileContent: string, onProgress?: (progress: number)
       entries.push(entry as LogEntry);
     }
 
-    if (i % 1000 === 0 && onProgress) {
+    if (i % chunkSize === 0 && i > 0) {
       const progress = Math.min(90, Math.floor((i / totalLines) * 90));
-      onProgress(progress);
+      if (onProgress) {
+        onProgress(progress);
+      }
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
   }
 
