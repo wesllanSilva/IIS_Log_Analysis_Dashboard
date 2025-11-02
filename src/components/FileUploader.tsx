@@ -2,17 +2,31 @@ import { Upload, FileText } from 'lucide-react';
 
 interface FileUploaderProps {
   onFileLoad: (content: string, filename: string) => void;
+  onStatusChange: (status: 'idle' | 'loading' | 'success' | 'error', progress?: number, error?: string) => void;
 }
 
-export default function FileUploader({ onFileLoad }: FileUploaderProps) {
+export default function FileUploader({ onFileLoad, onStatusChange }: FileUploaderProps) {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    onStatusChange('loading', 0);
+
     const reader = new FileReader();
     reader.onload = (e) => {
-      const content = e.target?.result as string;
-      onFileLoad(content, file.name);
+      try {
+        const content = e.target?.result as string;
+        onFileLoad(content, file.name);
+        onStatusChange('success');
+        setTimeout(() => onStatusChange('idle'), 1500);
+      } catch (error) {
+        onStatusChange('error', 0, error instanceof Error ? error.message : 'Unknown error');
+        setTimeout(() => onStatusChange('idle'), 3000);
+      }
+    };
+    reader.onerror = () => {
+      onStatusChange('error', 0, 'Failed to read file');
+      setTimeout(() => onStatusChange('idle'), 3000);
     };
     reader.readAsText(file);
   };
@@ -32,7 +46,7 @@ export default function FileUploader({ onFileLoad }: FileUploaderProps) {
           </p>
           <p className="text-sm text-gray-500 flex items-center gap-2">
             <FileText className="w-4 h-4" />
-            Click to select a .log file
+            Click to select a .log file (max 500MB)
           </p>
         </div>
         <input

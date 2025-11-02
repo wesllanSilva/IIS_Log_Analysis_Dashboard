@@ -5,7 +5,8 @@ import FilterPanel from './FilterPanel';
 import SummaryCards from './SummaryCards';
 import StatsTable from './StatsTable';
 import ChartView from './ChartView';
-import { parseIISLog, calculateRouteStats, filterEntries } from '../utils/logHelpers';
+import ProcessingStatus from './ProcessingStatus';
+import { parseIISLog, calculateRouteStats, filterEntries, validateFile } from '../utils/logHelpers';
 import { LogEntry } from '../types';
 
 export default function Dashboard() {
@@ -13,12 +14,45 @@ export default function Dashboard() {
   const [filteredEntries, setFilteredEntries] = useState<LogEntry[]>([]);
   const [filename, setFilename] = useState<string>('');
   const [filters, setFilters] = useState({ route: '', status: 'all' });
+  const [processingStatus, setProcessingStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [progress, setProgress] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+
+  const handleStatusChange = (
+    status: 'idle' | 'loading' | 'success' | 'error',
+    progressValue?: number,
+    error?: string
+  ) => {
+    setProcessingStatus(status);
+    if (progressValue !== undefined) {
+      setProgress(progressValue);
+    }
+    if (error) {
+      setErrorMessage(error);
+    }
+  };
 
   const handleFileLoad = (content: string, name: string) => {
-    const parsed = parseIISLog(content);
-    setEntries(parsed);
-    setFilteredEntries(parsed);
-    setFilename(name);
+    try {
+      const validation = validateFile(content.length, content);
+      if (!validation.valid) {
+        handleStatusChange('error', 0, validation.error);
+        return;
+      }
+
+      const parsed = parseIISLog(content, (progressValue) => {
+        setProgress(progressValue);
+      });
+
+      setEntries(parsed);
+      setFilteredEntries(parsed);
+      setFilename(name);
+      handleStatusChange('success');
+      setTimeout(() => handleStatusChange('idle'), 1500);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
+      handleStatusChange('error', 0, errorMsg);
+    }
   };
 
   const handleFilterChange = (newFilters: { route: string; status: string }) => {
@@ -31,6 +65,13 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen">
+      <ProcessingStatus
+        status={processingStatus}
+        progress={progress}
+        errorMessage={errorMessage}
+        successMessage="File processed successfully!"
+      />
+
       <header className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 shadow-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center gap-4">
@@ -50,7 +91,7 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {entries.length === 0 ? (
           <div className="py-12">
-            <FileUploader onFileLoad={handleFileLoad} />
+            <FileUploader onFileLoad={handleFileLoad} onStatusChange={handleStatusChange} />
             <div className="mt-8 text-center">
               <p className="text-gray-600 text-sm">
                 Upload an IIS log file to start analyzing your server performance

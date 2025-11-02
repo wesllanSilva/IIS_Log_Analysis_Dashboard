@@ -1,11 +1,28 @@
 import { LogEntry, RouteStats } from '../types';
 
-export function parseIISLog(fileContent: string): LogEntry[] {
+const MAX_FILE_SIZE = 500 * 1024 * 1024;
+
+export function validateFile(fileSize: number, fileContent: string): { valid: boolean; error?: string } {
+  if (fileSize > MAX_FILE_SIZE) {
+    return { valid: false, error: 'File too large (max 500MB)' };
+  }
+
+  if (!fileContent.includes('#Fields:')) {
+    return { valid: false, error: 'Invalid IIS log file format' };
+  }
+
+  return { valid: true };
+}
+
+export function parseIISLog(fileContent: string, onProgress?: (progress: number) => void): LogEntry[] {
   const lines = fileContent.split('\n');
   let fields: string[] = [];
   const entries: LogEntry[] = [];
+  const totalLines = lines.length;
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
     if (line.startsWith('#Fields:')) {
       fields = line
         .substring(9)
@@ -32,6 +49,19 @@ export function parseIISLog(fileContent: string): LogEntry[] {
       });
       entries.push(entry as LogEntry);
     }
+
+    if (i % 1000 === 0 && onProgress) {
+      const progress = Math.min(90, Math.floor((i / totalLines) * 90));
+      onProgress(progress);
+    }
+  }
+
+  if (entries.length === 0) {
+    throw new Error('No data entries found in file');
+  }
+
+  if (onProgress) {
+    onProgress(100);
   }
 
   return entries;
