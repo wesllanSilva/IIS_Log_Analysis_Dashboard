@@ -1,5 +1,7 @@
 # IIS Log Analyzer
 
+Este é um Projeto simples criado através do Bolt pra testar como ele cria e desenvolve uma aplicação.
+
 Um aplicativo moderno para análise e visualização de arquivos de log IIS (Internet Information Services). Construído com React, TypeScript e Tailwind CSS.
 
 ## Visão Geral
