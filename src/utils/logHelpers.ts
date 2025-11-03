@@ -19,9 +19,9 @@ export async function parseIISLog(fileContent: string, onProgress?: (progress: n
   const entries: LogEntry[] = [];
   const chunkSize = 20000;
   let currentPos = 0;
-  let lineCount = 0;
-  const totalSize = fileContent.length;
   let buffer = '';
+  const totalSize = fileContent.length;
+  const maxEntriesToStore = 50000;
 
   while (currentPos < totalSize) {
     const endPos = Math.min(currentPos + chunkSize * 100, totalSize);
@@ -33,7 +33,6 @@ export async function parseIISLog(fileContent: string, onProgress?: (progress: n
 
     for (let i = 0; i < lines.length - 1; i++) {
       const line = lines[i];
-      lineCount++;
 
       if (line.startsWith('#Fields:')) {
         fields = line
@@ -49,7 +48,7 @@ export async function parseIISLog(fileContent: string, onProgress?: (progress: n
       }
 
       const values = line.trim().split(' ');
-      if (values.length === fields.length) {
+      if (values.length === fields.length && entries.length < maxEntriesToStore) {
         const entry: any = {};
         fields.forEach((field, index) => {
           const value = values[index];
@@ -63,17 +62,24 @@ export async function parseIISLog(fileContent: string, onProgress?: (progress: n
       }
     }
 
-    const progress = Math.min(95, Math.floor((currentPos / totalSize) * 95));
+    const progress = Math.min(98, Math.floor((currentPos / totalSize) * 90) + 8);
     if (onProgress) {
       onProgress(progress);
     }
 
+    lines.length = 0;
     await new Promise(resolve => setTimeout(resolve, 0));
   }
 
   if (entries.length === 0) {
     throw new Error('No data entries found in file');
   }
+
+  if (onProgress) {
+    onProgress(99);
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 100));
 
   if (onProgress) {
     onProgress(100);
@@ -83,30 +89,40 @@ export async function parseIISLog(fileContent: string, onProgress?: (progress: n
 }
 
 export function calculateRouteStats(entries: LogEntry[]): RouteStats[] {
-  const routeMap = new Map<string, LogEntry[]>();
+  const routeMap = new Map<string, {
+    times: number[];
+    errorCount: number;
+    count: number;
+  }>();
 
   entries.forEach(entry => {
     const route = entry.cs_uri_stem;
     if (!routeMap.has(route)) {
-      routeMap.set(route, []);
+      routeMap.set(route, { times: [], errorCount: 0, count: 0 });
     }
-    routeMap.get(route)!.push(entry);
+    const stats = routeMap.get(route)!;
+    stats.times.push(entry.time_taken);
+    stats.count++;
+    if (entry.sc_status !== 200) {
+      stats.errorCount++;
+    }
   });
 
   const stats: RouteStats[] = [];
 
-  routeMap.forEach((routeEntries, route) => {
-    const times = routeEntries.map(e => e.time_taken);
-    const errorCount = routeEntries.filter(e => e.sc_status !== 200).length;
+  routeMap.forEach((data, route) => {
+    const avgTime = data.times.reduce((a, b) => a + b, 0) / data.times.length;
+    const minTime = Math.min(...data.times);
+    const maxTime = Math.max(...data.times);
 
     stats.push({
       route,
-      count: routeEntries.length,
-      avgTime: times.reduce((a, b) => a + b, 0) / times.length,
-      minTime: Math.min(...times),
-      maxTime: Math.max(...times),
-      errorCount,
-      successRate: ((routeEntries.length - errorCount) / routeEntries.length) * 100
+      count: data.count,
+      avgTime,
+      minTime,
+      maxTime,
+      errorCount: data.errorCount,
+      successRate: ((data.count - data.errorCount) / data.count) * 100
     });
   });
 
