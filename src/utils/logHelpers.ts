@@ -15,49 +15,60 @@ export function validateFile(fileSize: number, fileContent: string): { valid: bo
 }
 
 export async function parseIISLog(fileContent: string, onProgress?: (progress: number) => void): Promise<LogEntry[]> {
-  const lines = fileContent.split('\n');
   let fields: string[] = [];
   const entries: LogEntry[] = [];
-  const totalLines = lines.length;
-  const chunkSize = 10000;
+  const chunkSize = 20000;
+  let currentPos = 0;
+  let lineCount = 0;
+  const totalSize = fileContent.length;
+  let buffer = '';
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  while (currentPos < totalSize) {
+    const endPos = Math.min(currentPos + chunkSize * 100, totalSize);
+    buffer += fileContent.substring(currentPos, endPos);
+    currentPos = endPos;
 
-    if (line.startsWith('#Fields:')) {
-      fields = line
-        .substring(9)
-        .trim()
-        .split(' ')
-        .map(f => f.replace(/-/g, '_'));
-      continue;
-    }
+    const lines = buffer.split('\n');
+    buffer = lines[lines.length - 1];
 
-    if (line.startsWith('#') || line.trim() === '') {
-      continue;
-    }
+    for (let i = 0; i < lines.length - 1; i++) {
+      const line = lines[i];
+      lineCount++;
 
-    const values = line.trim().split(' ');
-    if (values.length === fields.length) {
-      const entry: any = {};
-      fields.forEach((field, index) => {
-        const value = values[index];
-        if (field === 'sc_status' || field === 'sc_substatus' || field === 'sc_win32_status' || field === 'time_taken') {
-          entry[field] = parseInt(value) || 0;
-        } else {
-          entry[field] = value;
-        }
-      });
-      entries.push(entry as LogEntry);
-    }
-
-    if (i % chunkSize === 0 && i > 0) {
-      const progress = Math.min(90, Math.floor((i / totalLines) * 90));
-      if (onProgress) {
-        onProgress(progress);
+      if (line.startsWith('#Fields:')) {
+        fields = line
+          .substring(9)
+          .trim()
+          .split(' ')
+          .map(f => f.replace(/-/g, '_'));
+        continue;
       }
-      await new Promise(resolve => setTimeout(resolve, 0));
+
+      if (line.startsWith('#') || line.trim() === '') {
+        continue;
+      }
+
+      const values = line.trim().split(' ');
+      if (values.length === fields.length) {
+        const entry: any = {};
+        fields.forEach((field, index) => {
+          const value = values[index];
+          if (field === 'sc_status' || field === 'sc_substatus' || field === 'sc_win32_status' || field === 'time_taken') {
+            entry[field] = parseInt(value) || 0;
+          } else {
+            entry[field] = value;
+          }
+        });
+        entries.push(entry as LogEntry);
+      }
     }
+
+    const progress = Math.min(95, Math.floor((currentPos / totalSize) * 95));
+    if (onProgress) {
+      onProgress(progress);
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 0));
   }
 
   if (entries.length === 0) {
