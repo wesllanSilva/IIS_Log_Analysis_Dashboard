@@ -79,7 +79,7 @@ export default function Dashboard() {
               <Database className="w-10 h-10 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-white">IIS Log Analyzer</h1>
+              <h1 className="text-4xl font-bold text-white">WSTACK - IIS Log Analyzer</h1>
               <p className="text-blue-100 mt-1">
                 Analyze and visualize your IIS server logs
               </p>
