@@ -32,3 +32,33 @@ export interface FilterOptions {
   dateFrom: string;
   dateTo: string;
 }
+
+export interface LogUpload {
+  id: string;
+  filename: string;
+  total_lines: number;
+  processed_entries: number;
+  upload_date: string;
+}
+
+export interface EndpointStat {
+  id: string;
+  endpoint: string;
+  request_count: number;
+  avg_time_ms: number;
+  min_time_ms: number;
+  max_time_ms: number;
+  error_count: number;
+  success_rate: number;
+}
+
+export interface EndpointRequest {
+  id: string;
+  endpoint: string;
+  date: string;
+  time: string;
+  time_taken: number;
+  sc_status: number;
+  cs_user_agent: string;
+  cs_host: string;
+}
