@@ -5,7 +5,6 @@ import FilterPanel from './FilterPanel';
 import SummaryCards from './SummaryCards';
 import StatsTable from './StatsTable';
 import ChartView from './ChartView';
-import AnalyticsReport from './AnalyticsReport';
 import ProcessingStatus from './ProcessingStatus';
 import { parseIISLog, calculateRouteStats, filterEntries, validateFile } from '../utils/logHelpers';
 import { saveLogAnalysis } from '../services/analyticsService';
@@ -21,7 +20,6 @@ export default function Dashboard() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [totalLines, setTotalLines] = useState(0);
-  const [viewMode, setViewMode] = useState<'simple' | 'advanced'>('simple');
 
   const handleStatusChange = (
     status: 'idle' | 'loading' | 'success' | 'error',
@@ -54,7 +52,6 @@ export default function Dashboard() {
       setEntries(parsed);
       setFilteredEntries(parsed);
       setFilename(name);
-      setViewMode('advanced');
       handleStatusChange('success');
       setTimeout(() => handleStatusChange('idle'), 1500);
     } catch (error) {
@@ -134,13 +131,11 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="space-y-8">
-            <div className="bg-white rounded-xl shadow-md p-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 flex-1">
-                <FileText className="w-5 h-5 text-blue-600" />
-                <div>
-                  <p className="text-sm text-gray-600">Analyzing file:</p>
-                  <p className="font-semibold text-gray-900">{filename}</p>
-                </div>
+            <div className="bg-white rounded-xl shadow-md p-4 flex items-center gap-3">
+              <FileText className="w-5 h-5 text-blue-600" />
+              <div className="flex-1">
+                <p className="text-sm text-gray-600">Analyzing file:</p>
+                <p className="font-semibold text-gray-900">{filename}</p>
               </div>
               <div className="flex gap-3">
                 <button
@@ -166,7 +161,6 @@ export default function Dashboard() {
                     setFilteredEntries([]);
                     setFilename('');
                     setFilters({ route: '', status: 'all' });
-                    setViewMode('simple');
                   }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                 >
@@ -175,23 +169,18 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {viewMode === 'advanced' && entries.length > 0 ? (
-              <>
-                <AnalyticsReport stats={stats} />
-              </>
-            ) : (
-              <>
-                <SummaryCards entries={filteredEntries} />
-                <FilterPanel onFilterChange={handleFilterChange} />
-                <ChartView stats={stats} />
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                    Detailed Statistics
-                  </h2>
-                  <StatsTable stats={stats} />
-                </div>
-              </>
-            )}
+            <SummaryCards entries={filteredEntries} />
+
+            <FilterPanel onFilterChange={handleFilterChange} />
+
+            <ChartView stats={stats} />
+
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                Detailed Statistics
+              </h2>
+              <StatsTable stats={stats} />
+            </div>
 
             {filteredEntries.length === 0 && entries.length > 0 && (
               <div className="text-center py-12">
