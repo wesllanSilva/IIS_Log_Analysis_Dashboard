@@ -45,7 +45,7 @@ export default function Dashboard() {
         return;
       }
 
-      setTotalLines(content.split('\n').length);
+      setTotalLines(Math.ceil(content.length / 100));
 
       const parsed = await parseIISLog(content, (progressValue) => {
         setProgress(progressValue);
