@@ -24,15 +24,9 @@ export async function saveLogAnalysis(
   if (uploadResult.error) throw uploadResult.error;
   const uploadId = uploadResult.data.id;
 
-  const statsData = stats.map(stat => ({
+  const statsData = stats.map(({ id, ...stat }) => ({
     upload_id: uploadId,
-    endpoint: stat.endpoint,
-    request_count: stat.request_count,
-    avg_time_ms: stat.avg_time_ms,
-    min_time_ms: stat.min_time_ms,
-    max_time_ms: stat.max_time_ms,
-    error_count: stat.error_count,
-    success_rate: stat.success_rate,
+    ...stat,
   }));
 
   const statsResult = await supabase

@@ -1,17 +1,63 @@
+import { useState, useMemo } from 'react';
 import { RouteStats } from '../types';
-import { TrendingUp, TrendingDown, Clock, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, AlertCircle, Search } from 'lucide-react';
 
 interface StatsTableProps {
   stats: RouteStats[];
 }
 
 export default function StatsTable({ stats }: StatsTableProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAll, setShowAll] = useState(false);
+
   const formatTime = (ms: number) => {
     return ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${ms.toFixed(0)}ms`;
   };
 
+  const filteredStats = useMemo(() => {
+    const top10 = stats.slice(0, 10);
+    const dataToFilter = showAll ? stats : top10;
+
+    if (!searchQuery.trim()) {
+      return dataToFilter;
+    }
+
+    return dataToFilter.filter(stat =>
+      stat.route.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [stats, searchQuery, showAll]);
+
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-blue-100 border-b border-blue-200">
+        <div className="flex items-center gap-2 relative">
+          <Search className="w-4 h-4 text-gray-500 absolute left-3" />
+          <input
+            type="text"
+            placeholder="Search endpoints..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-sm border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          {!showAll && stats.length > 10 && (
+            <button
+              onClick={() => setShowAll(true)}
+              className="ml-2 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+            >
+              Show All ({stats.length})
+            </button>
+          )}
+          {showAll && stats.length > 10 && (
+            <button
+              onClick={() => setShowAll(false)}
+              className="ml-2 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+            >
+              Show Top 10
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gradient-to-r from-blue-600 to-blue-700">
@@ -40,7 +86,7 @@ export default function StatsTable({ stats }: StatsTableProps) {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {stats.map((stat, index) => (
+            {filteredStats.map((stat, index) => (
               <tr
                 key={stat.route}
                 className="hover:bg-blue-50 transition-colors duration-150"
@@ -118,6 +164,12 @@ export default function StatsTable({ stats }: StatsTableProps) {
           </tbody>
         </table>
       </div>
+
+      {filteredStats.length === 0 && (
+        <div className="px-6 py-8 text-center">
+          <p className="text-gray-500">No endpoints match your search</p>
+        </div>
+      )}
     </div>
   );
 }
