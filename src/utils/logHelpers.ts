@@ -126,7 +126,7 @@ export function calculateRouteStats(entries: LogEntry[]): RouteStats[] {
     });
   });
 
-  return stats.sort((a, b) => b.count - a.count);
+  return stats.sort((a, b) => b.maxTime - a.maxTime);
 }
 
 export function filterEntries(entries: LogEntry[], filters: Partial<{
